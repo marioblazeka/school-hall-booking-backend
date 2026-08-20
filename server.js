@@ -1,14 +1,20 @@
 import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import connectDB from './config/db.js';
+import authRoutes from './routes/auth.js';
+import reservationRoutes from './routes/reservations.js';
 
+dotenv.config();
 const app = express();
-const PORT = 5000;
 
+connectDB();
+
+app.use(cors());
 app.use(express.json());
 
-app.get('/api/test', (req, res) => {
-    res.json({ poruka: "Backend server uspješno radi koristeći ES Module!" });
-});
+app.use('/api/auth', authRoutes);
+app.use('/api/reservations', reservationRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Server je pokrenut na http://localhost:${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server pokrenut na portu ${PORT}`));

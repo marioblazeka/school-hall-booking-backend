@@ -1,14 +1,22 @@
-const jwt = require('jsonwebtoken');
+import mongoose from 'mongoose';
 
-module.exports = function (req, res, next) {
-    const token = req.header('Authorization')?.split(' ')[1];
-    if (!token) return res.status(401).json({ msg: 'Nema tokena, autorizacija odbijena.' });
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded.user;
-        next();
-    } catch (err) {
-        res.status(401).json({ msg: 'Token nije valjan.' });
+const ReservationSchema = new mongoose.Schema({
+    fullName: { type: String, required: true },
+    email: { type: String, required: true },
+    location: { type: String, required: true },
+    date: { type: String, required: true }, // Format: YYYY-MM-DD iz kalendara
+    timeSlot: { type: String, required: true },
+    notes: { type: String, default: '' }, // Napomena iz dizajna
+    resources: {
+        equipment: { type: Boolean, default: false },
+        lockers: { type: Boolean, default: false },
+        techDevices: { type: Boolean, default: false }
+    },
+    status: { 
+        type: String, 
+        enum: ['Na čekanju', 'Odobreno', 'Odbijeno'], 
+        default: 'Na čekanju' 
     }
-};
+}, { timestamps: true });
+
+export default mongoose.model('Reservation', ReservationSchema);

@@ -1,16 +1,22 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
 const ReservationSchema = new mongoose.Schema({
     fullName: { type: String, required: true },
     email: { type: String, required: true },
-    location: { type: String, required: true }, // Mjesto prebivališta/sjedište
-    hallName: { type: String, required: true }, // npr. "Glavna sportska dvorana"
-    date: { type: String, required: true }, // YYYY-MM-DD
-    timeSlot: { type: String, required: true }, // npr. "18:00 - 19:30"
+    location: { type: String, required: true },
+    date: { type: String, required: true }, // Format: YYYY-MM-DD iz kalendara
+    timeSlot: { type: String, required: true },
+    notes: { type: String, default: '' }, // Napomena iz dizajna
     resources: {
-        equipment: { type: Boolean, default: false }, // sportska oprema
-        lockers: { type: Boolean, default: false },   // svlačionice
-        techDevices: { type: Boolean, default: false } // tehnički uređaji
+        equipment: { type: Boolean, default: false },
+        lockers: { type: Boolean, default: false },
+        techDevices: { type: Boolean, default: false }
     },
-    status: { type: String, enum: ['Na čekanju', 'Odobreno', 'Odbijeno'], default: 'Na čekanju' }
+    status: { 
+        type: String, 
+        enum: ['Na čekanju', 'Odobreno', 'Odbijeno'], 
+        default: 'Na čekanju' 
+    }
 }, { timestamps: true });
-module.exports = mongoose.model('Reservation', ReservationSchema);
+
+export default mongoose.model('Reservation', ReservationSchema);
