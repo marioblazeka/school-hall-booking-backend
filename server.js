@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import dotenv from 'dotenv/config';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 import reservationRoutes from './routes/reservations.js';
+
+
+await connectDB();
 
 dotenv.config();
 const app = express();
