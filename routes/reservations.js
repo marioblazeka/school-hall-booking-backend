@@ -15,6 +15,23 @@ router.post('/', async (req, res) => {
     }
 });
 
+// JAVNI PRISTUP: Dohvat zauzetih datuma bez podataka korisnika
+router.get('/availability', async (req, res) => {
+    try {
+        const reservations = await Reservation.find(
+            { status: { $in: ['Na čekanju', 'Odobreno'] } },
+            { date: 1, _id: 0 }
+        );
+        const counts = reservations.reduce((result, reservation) => {
+            result[reservation.date] = (result[reservation.date] || 0) + 1;
+            return result;
+        }, {});
+        res.json(counts);
+    } catch (err) {
+        res.status(500).json({ msg: 'Dostupnost trenutno nije dostupna.' });
+    }
+});
+
 // ZAŠTIĆENI PRISTUP: Dohvat svih rezervacija za admin panel
 router.get('/', auth, async (req, res) => {
     try {
