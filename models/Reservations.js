@@ -4,6 +4,7 @@ const ReservationSchema = new mongoose.Schema({
     fullName: { type: String, required: true },
     email: { type: String, required: true },
     location: { type: String, required: true },
+    hallName: { type: String, required: true },
     date: { type: String, required: true }, // Format: YYYY-MM-DD iz kalendara
     timeSlot: { type: String, required: true },
     notes: { type: String, default: '' }, // Napomena iz dizajna
