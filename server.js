@@ -8,8 +8,6 @@ import reservationRoutes from './routes/reservations.js';
 dotenv.config();
 const app = express();
 
-connectDB();
-
 app.use(cors());
 app.use(express.json());
 
@@ -17,4 +15,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server pokrenut na portu ${PORT}`));
+
+connectDB().then(() => {
+	app.listen(PORT, () => console.log(`Server pokrenut na portu ${PORT}`));
+});

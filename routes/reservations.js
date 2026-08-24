@@ -1,5 +1,5 @@
 import express from 'express';
-import Reservation from '../models/Reservation.js';
+import Reservation from '../models/Reservations.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
@@ -32,7 +32,7 @@ router.put('/:id', auth, async (req, res) => {
         return res.status(400).json({ msg: 'Neispravan status.' });
     }
     try {
-        let reservation = await Reservation.findById(req.id);
+        let reservation = await Reservation.findById(req.params.id);
         if (!reservation) return res.status(404).json({ msg: 'Rezervacija nije pronađena.' });
 
         reservation.status = status;
