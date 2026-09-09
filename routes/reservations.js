@@ -15,6 +15,9 @@ const isValidDate = (date) => {
 router.post('/', async (req, res) => {
     try {
         const { fullName, email, location, hallName, date, timeSlot, notes, resources } = req.body;
+        if (!fullName?.trim() || !email?.trim() || !location?.trim() || !hallName || !date || !timeSlot?.trim()) {
+            return res.status(400).json({ msg: 'Sva obavezna polja rezervacije moraju biti popunjena.' });
+        }
         const reservationDate = new Date(`${date}T00:00:00`);
         if (!isValidDate(date) || reservationDate < new Date(new Date().setHours(0, 0, 0, 0))) {
             return res.status(400).json({ msg: 'Datum rezervacije nije valjan.' });
@@ -32,7 +35,14 @@ router.post('/', async (req, res) => {
         const reservation = await newReservation.save();
         res.status(201).json(reservation);
     } catch (err) {
-        res.status(400).json({ msg: 'Validacijska greška ili neispravan format.' });
+        const validationFields = err.name === 'ValidationError'
+            ? Object.keys(err.errors)
+            : [];
+        res.status(400).json({
+            msg: validationFields.length
+                ? `Neispravna polja: ${validationFields.join(', ')}.`
+                : 'Validacijska greška ili neispravan format.'
+        });
     }
 });
 
