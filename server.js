@@ -13,8 +13,16 @@ const app = express();
 const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:4173')
   .split(',').map((origin) => origin.trim()).filter(Boolean);
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  return /^https:\/\/([a-z0-9-]+\.)*(netlify\.app|vercel\.app)$/.test(origin);
+};
+
 app.use(helmet());
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: (origin, callback) => {
+  callback(null, isAllowedOrigin(origin));
+} }));
 app.use(express.json({ limit: '20kb' }));
 
 app.get('/', (req, res) => res.json({ name: 'School Hall Booking API', status: 'ok' }));
