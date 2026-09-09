@@ -1,13 +1,34 @@
 import express from 'express';
 import Reservation from '../models/Reservations.js';
 import auth from '../middleware/auth.js';
+import admin from '../middleware/admin.js';
 
 const router = express.Router();
+
+const isValidDate = (date) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const parsed = new Date(`${date}T00:00:00Z`);
+    return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === date;
+};
 
 // JAVNI PRISTUP: Slanje novog zahtjeva
 router.post('/', async (req, res) => {
     try {
-        const newReservation = new Reservation(req.body);
+        const { fullName, email, location, hallName, date, timeSlot, notes, resources } = req.body;
+        const reservationDate = new Date(`${date}T00:00:00`);
+        if (!isValidDate(date) || reservationDate < new Date(new Date().setHours(0, 0, 0, 0))) {
+            return res.status(400).json({ msg: 'Datum rezervacije nije valjan.' });
+        }
+
+        const conflict = await Reservation.exists({
+            date,
+            hallName,
+            timeSlot,
+            status: { $in: ['Na čekanju', 'Odobreno'] }
+        });
+        if (conflict) return res.status(409).json({ msg: 'Odabrani termin je već zauzet.' });
+
+        const newReservation = new Reservation({ fullName, email, location, hallName, date, timeSlot, notes, resources });
         const reservation = await newReservation.save();
         res.status(201).json(reservation);
     } catch (err) {
@@ -33,7 +54,7 @@ router.get('/availability', async (req, res) => {
 });
 
 // ZAŠTIĆENI PRISTUP: Dohvat svih rezervacija za admin panel
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, admin, async (req, res) => {
     try {
         const reservations = await Reservation.find().sort({ createdAt: -1 });
         res.json(reservations);
@@ -43,7 +64,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // ZAŠTIĆENI PRISTUP: Promjena statusa (Odobreno / Odbijeno)
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, admin, async (req, res) => {
     const { status } = req.body;
     if (!['Odobreno', 'Odbijeno', 'Na čekanju'].includes(status)) {
         return res.status(400).json({ msg: 'Neispravan status.' });

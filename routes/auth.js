@@ -5,13 +5,16 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 
 const router = express.Router();
+const adminEmails = new Set(
+    (process.env.ADMIN_EMAILS || '').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
+);
 
 router.post('/signup', async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
     const { password } = req.body;
 
-    if (!email || !password || password.length < 6) {
-        return res.status(400).json({ msg: 'Email i lozinka od najmanje 6 znakova su obavezni.' });
+    if (!email || !/^\S+@\S+\.\S+$/.test(email) || !password || password.length < 8) {
+        return res.status(400).json({ msg: 'Ispravan email i lozinka od najmanje 8 znakova su obavezni.' });
     }
 
     try {
@@ -19,7 +22,7 @@ router.post('/signup', async (req, res) => {
         if (existingUser) return res.status(409).json({ msg: 'Korisnik s tim emailom već postoji.' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        await User.create({ email, password: hashedPassword });
+        await User.create({ email, password: hashedPassword, role: 'user' });
         res.status(201).json({ msg: 'Račun je uspješno kreiran.' });
     } catch (err) {
         res.status(500).json({ msg: 'Registracija trenutno nije moguća.' });
@@ -29,16 +32,19 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
-        let user = await User.findOne({ email });
+        const normalizedEmail = email?.trim().toLowerCase();
+        if (!normalizedEmail || !password) return res.status(400).json({ msg: 'Email i lozinka su obavezni.' });
+        let user = await User.findOne({ email: normalizedEmail });
         if (!user) return res.status(400).json({ msg: 'Neispravne vjerodajnice.' });
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ msg: 'Neispravne vjerodajnice.' });
 
-        const payload = { user: { id: user.id } };
+        const role = user.role === 'admin' || adminEmails.has(normalizedEmail) ? 'admin' : 'user';
+        const payload = { user: { id: user.id, role } };
         jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
             if (err) throw err;
-            res.json({ token });
+            res.json({ token, user: { email: user.email, role } });
         });
     } catch (err) {
         res.status(500).send('Server Error');
@@ -46,27 +52,28 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/forgot-password', async (req, res) => {
-    const email = req.body.email?.trim().toLowerCase();
-    const user = await User.findOne({ email });
-    const response = { msg: 'Ako korisnik postoji, generiran je token za resetiranje.' };
+    try {
+        const email = req.body.email?.trim().toLowerCase();
+        const user = await User.findOne({ email });
+        const response = { msg: 'Ako korisnik postoji, generiran je token za resetiranje.' };
 
-    if (!user) return res.json(response);
+        if (!user) return res.json(response);
 
-    user.resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
-    await user.save();
+        user.resetToken = crypto.randomBytes(32).toString('hex');
+        user.resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
+        await user.save();
 
-    if (process.env.NODE_ENV !== 'production') {
-        return res.json({ ...response, resetToken: user.resetToken });
+        if (process.env.NODE_ENV !== 'production') return res.json({ ...response, resetToken: user.resetToken });
+        res.json(response);
+    } catch {
+        res.status(500).json({ msg: 'Zahtjev trenutno nije moguće obraditi.' });
     }
-
-    res.json(response);
 });
 
 router.post('/reset-password', async (req, res) => {
     const { token, password } = req.body;
-    if (!token || !password || password.length < 6) {
-        return res.status(400).json({ msg: 'Token i nova lozinka od najmanje 6 znakova su obavezni.' });
+    if (!token || !password || password.length < 8) {
+        return res.status(400).json({ msg: 'Token i nova lozinka od najmanje 8 znakova su obavezni.' });
     }
 
     const user = await User.findOne({
